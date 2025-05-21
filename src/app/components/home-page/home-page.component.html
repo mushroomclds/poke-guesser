@@ -1,0 +1,47 @@
+<div class="flex flex-col justify-center items-center h-screen">
+
+    <div class="text-6xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-red-500 to-purple-600 drop-shadow-lg animate-pulse">
+        Pokemon TCG Card Game
+    </div>
+
+    
+    <div class="flex p-5">
+        <input type="text" placeholder="Enter Pokemon" class="input" 
+        [value]="pokemonInput()"
+        (input)="pokemonInput.set($any($event.target).value)"
+        (keydown.enter)="getPokemonImage()"
+        />
+        <button class="btn btn-primary" (click)="getPokemonImage()">Search</button>
+    </div>
+
+
+    @if( this.showSearchResults() === true && getImagesLength() > 0 ) {
+
+        <div class="flex">
+            @for (image of this.images | keyvalue; track image.key) {
+                <div class="flex flex-col items-center">
+                    <img [src]="image.value.image" alt="Pokemon Card" class="w-64 h-96 rounded-lg shadow-lg m-2" />
+                    {{image.value.cardType}}
+                    <p>{{image.value.price | currency}}</p>
+                </div>
+            }
+        </div>
+    }
+        
+
+</div>
+
+
+<!-- make it into a game
+ get a random pokemon card(or even show a few and let user choose one), blue out the name and picture
+ let user guess the pokemon 
+ with every wrong guess it reveals letters in name or unblurs a bit
+ 5 total tries -->
+
+<!--
+ another game mode would be to make it a high lower between card prices
+    or even a game where you have to guess the price of a card
+    or a game where you have to guess the rarity of a card
+    or a game where you have to guess the type of a card
+    or a game where you have to guess the set of a card
+-->
