@@ -1,0 +1,43 @@
+# Use the official Python image from the Docker Hub
+# Set Up Flask Backend
+FROM python:3.10-slim AS build-backend
+
+# Set the working directory in the container
+WORKDIR /usr/local/app/backend
+
+# Install required system dependencies
+RUN apt-get update && apt-get install -y \
+    libaio1 \
+    wget \
+    unzip \
+    && rm -rf /var/lib/apt/lists/*
+
+# Download and install Oracle Instant Client
+# RUN mkdir -p /opt/oracle && \
+#     cd /opt/oracle && \
+#     wget https://download.oracle.com/otn_software/linux/instantclient/2370000/instantclient-basiclite-linux.x64-23.7.0.25.01.zip && \
+#     unzip instantclient-basiclite-linux.x64-23.7.0.25.01.zip && \
+#     rm instantclient-basiclite-linux.x64-23.7.0.25.01.zip
+
+# Set environment variables for Oracle Instant Client
+# ENV LD_LIBRARY_PATH=/opt/oracle/instantclient_23_7:$LD_LIBRARY_PATH
+
+# Copy the requirements file into the container
+COPY backend/requirements.txt ./
+
+# Activate the virtual environment
+RUN pip install --upgrade pip
+
+# Install the dependencies
+RUN python3 -m pip install --no-cache-dir -r requirements.txt
+
+# Copy the rest of the backend application files
+COPY backend/ .
+
+# Expose the port the app runs on
+EXPOSE 5000
+
+# Run the application / start Gunicorn, imports flask app from app module, app is the Flask instance
+# --access-logfile=- Logs all HTTP access logs (requests) to stdout
+# --error-logfile=-Logs all errors to stderr 
+CMD ["gunicorn", "--chdir", "/usr/local/app/backend", "main:app", "--bind", "0.0.0.0:5000", "--log-level=info", "--access-logfile=-", "--error-logfile=-"]

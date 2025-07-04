@@ -1,0 +1,80 @@
+# Use the official Node.js image from the Docker Hub
+# Stage 1: Build Angular App with Node.js image(Debian-based)
+FROM node:18-bullseye-slim AS build-frontend
+
+# Set the working directory in the container
+WORKDIR /usr/local/app/frontend
+
+# Copy the package.json and package-lock.json files
+COPY frontend/package*.json ./
+
+# Install dependencies using npm ci for speed and reproducibility
+RUN npm ci 
+
+# Copy the rest of the frontend application files
+COPY frontend/ .
+
+# Build the Angular app with production configuration
+RUN npx ng build --configuration production
+
+# Stage 3: Serve with Nginx (Debian-based)
+FROM nginx:latest
+WORKDIR /usr/share/nginx/html
+
+ARG PROJECT_NAME="pokeTCG-Guesser"
+
+# Copy built Angular app from the first stage to Nginx's web directory
+COPY --from=build-frontend /usr/local/app/frontend/dist/${PROJECT_NAME}/browser /usr/share/nginx/html
+
+# Copy the custom Nginx configuration file
+COPY frontend/default.conf /etc/nginx/conf.d/default.conf
+COPY frontend/nginx.conf /etc/nginx/nginx.conf
+
+#update and install vim
+RUN apt update && apt install -y vim && apt-get install -y gunicorn
+
+# Expose port 80 for web traffic
+EXPOSE 80
+
+RUN ln -s /usr/bin/python3 /usr/bin/python
+
+# Extract the inline CSS content and calculate its hash
+
+RUN echo "=== SIMPLIFIED TAILWIND CSS HASH CALCULATION ===" && \
+    echo "1. Full index.html content:" && \
+    cat /usr/share/nginx/html/index.html && \
+    echo -e "\n2. Extracting and processing CSS:" && \
+    
+    # Extract CSS content using Perl
+    STYLE_CONTENT=$(perl -0777 -ne 'print $1 if /<style[^>]*>(.*?)<\/style>/s' /usr/share/nginx/html/index.html) && \
+    echo "Raw CSS content:" && \
+    echo "[$STYLE_CONTENT]" && \
+    echo "Raw length: $(echo -n "$STYLE_CONTENT" | wc -c)" && \
+    
+    # Clean the CSS content (normalize whitespace like browsers do)
+    CLEANED_CSS=$(echo "$STYLE_CONTENT" | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//' | tr -s '[:space:]' ' ') && \
+    echo "Cleaned CSS content:" && \
+    echo "[$CLEANED_CSS]" && \
+    echo "Cleaned length: $(echo -n "$CLEANED_CSS" | wc -c)" && \
+    
+    # Calculate SHA-256 hash and convert to base64
+    if [ -n "$CLEANED_CSS" ]; then \
+        HASH=$(echo -n "$CLEANED_CSS" | sha256sum | cut -d' ' -f1) && \
+        BASE64_HASH=$(echo -n "$HASH" | xxd -r -p | base64) && \
+        CSP_HASH="sha256-$BASE64_HASH" && \
+        echo "Generated hash: $CSP_HASH" && \
+        
+        # Update nginx config
+        sed -i "s|STYLE_HASH_PLACEHOLDER|$CSP_HASH|g" /etc/nginx/conf.d/default.conf && \
+        echo "Updated nginx config:" && \
+        grep -A 3 -B 3 "sha256-" /etc/nginx/conf.d/default.conf; \
+    else \
+        echo "ERROR: No CSS content found!"; \
+    fi && \
+    echo "=== END SIMPLIFIED CALCULATION ==="
+
+
+# Start Nginx
+CMD ["nginx", "-g", "daemon off;"]
+
+#docker build -f Dockerfile.angular -t myapp . --progress=plain --no-cache

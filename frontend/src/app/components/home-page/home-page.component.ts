@@ -7,6 +7,8 @@ interface PokemonObject {
   price ?: number | string;
   cardType ?: string;
 }
+declare let gtag: Function;
+
 
 @Component({
   selector: 'app-home-page',
@@ -29,12 +31,15 @@ export class HomePageComponent {
 
   getPokemonImage(){
     // const inputElement = event.target as HTMLInputElement;
-    if (this.pokemonInput() === ''){
+    const sanitized = this.pokemonInput().trim().toLowerCase();
+    const encoded = encodeURIComponent(sanitized);
+
+    if (encoded === '') {
       console.log('Input is empty');
       return;
     }
-    let url = `https://api.pokemontcg.io/v2/cards?q=name:${this.pokemonInput()}`;
-
+    
+    let url = `https://api.pokemontcg.io/v2/cards?q=name:${encoded}`;
 
     this.http.get(url).subscribe((response: any) => {
       console.log(response);
