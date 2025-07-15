@@ -41,8 +41,9 @@ testem.log
 # System files
 .DS_Store
 Thumbs.db
-.env
+backend/app/.env
 frontend/def.conf
+wallet
 
 # Backend
 backend/app/__pycache__
@@ -50,3 +51,5 @@ backend/app/models/__pycache__
 backend/app/routes/__pycache__
 backend/app/services/__pycache__
 backend/app/utils/__pycache__
+backend/app/test.py
+backend/logs/flask_app.log
