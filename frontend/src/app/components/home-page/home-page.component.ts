@@ -162,24 +162,61 @@ export class HomePageComponent {
     const price1 = this.imageObject[1]?.price ?? 0;
     const price2 = this.imageObject[2]?.price ?? 0;
 
-    const hasBothCards = this.imageObject[1] && this.imageObject[2];
-    const isCorrect = answer ? price2 >= price1 : price2 <= price1;
+    const hasBothCards : boolean = Boolean(this.imageObject[1] && this.imageObject[2]);
 
-    if (hasBothCards && isCorrect) {
-      console.log('Answer is correct');
-      this.answeredCorrect.set(true);
-      this.isSecondCardLoading.set(true);
+    let obj = {
+      price1 : price1,
+      price2 : price2,
+      hasBothCards : hasBothCards,
+      answer : answer
 
-      this.popimageObject(); // go to next card to compare to
-      this.nextCardReset(); // reset the game state for the next card
-      this.score.set(this.score() + 1); // Increment score
-
-    } else {
-      console.log(`Wrong answer | price2: ${price2}, price1: ${price1}`);
-      this.answeredCorrect.set(false);
-      this.gameOver.set(true); 
     }
-    // this.answered.set(true);
+    this.http.post('/api/game-state-user-input', obj).subscribe(
+      {
+        next: (res : any ) => {
+          console.log(res);
+          console.log(res.result);
+          if (res.result){
+            console.log('Answer is correct');
+            this.answeredCorrect.set(true);
+            this.isSecondCardLoading.set(true);
+
+            this.popimageObject(); // go to next card to compare to
+            this.nextCardReset(); // reset the game state for the next card
+            this.score.set(this.score() + 1); // Increment score
+          }
+          else{
+            console.log(`Wrong answer | price2: ${price2}, price1: ${price1}`);
+            this.answeredCorrect.set(false);
+            this.gameOver.set(true); 
+            // this.resetGame();
+
+          }
+        },
+
+        error : (err) => {
+          console.log("error occurred during result logic" + err);
+        }
+
+      }
+    );
+
+    // const isCorrect = answer ? price2 >= price1 : price2 <= price1;
+
+    // if (hasBothCards && isCorrect) {
+    //   console.log('Answer is correct');
+    //   this.answeredCorrect.set(true);
+    //   this.isSecondCardLoading.set(true);
+
+    //   this.popimageObject(); // go to next card to compare to
+    //   this.nextCardReset(); // reset the game state for the next card
+    //   this.score.set(this.score() + 1); // Increment score
+
+    // } else {
+    //   console.log(`Wrong answer | price2: ${price2}, price1: ${price1}`);
+    //   this.answeredCorrect.set(false);
+    //   this.gameOver.set(true); 
+    // }
 
   }
 
@@ -235,7 +272,8 @@ export class HomePageComponent {
 
     let url = `https://api.pokemontcg.io/v2/cards?q=name:${encoded}`;
 
-    this.http.get(url).subscribe((response: any) => {
+    this.http.get(url).subscribe(
+      (response: any) => {
       console.log(response);
 
       // get 3 random cards from the response
