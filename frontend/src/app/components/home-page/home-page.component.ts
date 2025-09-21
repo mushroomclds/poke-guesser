@@ -46,85 +46,112 @@ export class HomePageComponent {
 
   addImageObject(setInput : { [key: number]: PokemonObject }) : Promise<boolean>  {
     return new Promise((resolve, reject) => {
-      let POKEAPI_BASE = 'https://pokeapi.co/api/v2/pokemon';
-      const randomIndex = Math.floor(Math.random() * 1024);
-      const pokeUrl = `${POKEAPI_BASE}/${randomIndex}`;
+      // let POKEAPI_BASE = 'https://pokeapi.co/api/v2/pokemon';
+      // const randomIndex = Math.floor(Math.random() * 1024);
+      // const pokeUrl = `${POKEAPI_BASE}/${randomIndex}`;
       // console.log('Random Pokemon URL:', pokeUrl);
       // this.answered.set(false);
 
-
-      this.http.get(pokeUrl).subscribe({
-        next: (data: any) => {
+      // this.http.get(pokeUrl).subscribe({
+      //   next: (data: any) => {
           
-          // console.log('Random Pokemon Data:', data);
-          let pokemonName = data.name;
-          console.log('Random Pokemon Name:', pokemonName);
-          if (pokemonName.includes('-') ) {
-            if (this.arrayOfPokemonWithHyphens.includes(pokemonName)) {
-              const firstIndex = pokemonName.indexOf('-');
-              const secondIndex = pokemonName.indexOf('-', firstIndex + 1);
-              pokemonName = pokemonName.substring(0, secondIndex); // Remove the second hyphen and everything after it
-            }
-            else {
-              pokemonName = pokemonName.substring(0, pokemonName.indexOf('-')); // Remove the hyphen and everything after it
-            }
+      //     // console.log('Random Pokemon Data:', data);
+      //     // let pokemonName = data.name; 
+      //     // console.log('Random Pokemon Name:', pokemonName);
+      //     // if (pokemonName.includes('-') ) {
+      //     //   if (this.arrayOfPokemonWithHyphens.includes(pokemonName)) {
+      //     //     const firstIndex = pokemonName.indexOf('-');
+      //     //     const secondIndex = pokemonName.indexOf('-', firstIndex + 1);
+      //     //     pokemonName = pokemonName.substring(0, secondIndex); // Remove the second hyphen and everything after it
+      //     //   }
+      //     //   else {
+      //     //     pokemonName = pokemonName.substring(0, pokemonName.indexOf('-')); // Remove the hyphen and everything after it
+      //     //   }
+      //     // }
+      //     // this.pokemonInput.set(pokemonName); // Set the input field to the random Pokemon name
+      //     // let url = `https://api.pokemontcg.io/v2/cards?q=name:${this.pokemonInput()}`;
+      //   },
+      //   error: (error) => {
+      //     console.error('Error fetching random Pokemon:', error);
+      //     reject(false);
+      //   }
+      // });
+      let url = `/api/get-card-data`
+
+      this.http.get(url).subscribe({
+        next: (response: any) => {
+        console.log(response);
+        // this.imageObject = {} // Clear previous images
+        // const randomIndex = Math.floor(Math.random() * response.data.length);
+        if(response.data.name){
+          console.log("Fetching data for ", response.data.name );
+        }
+
+        if( response.data && response.data.images && response.data.images.large) {
+          //get the price object for the card price and card type
+          if( !response.data.tcgplayer || !response.data.tcgplayer.prices || response.data.length === 0) {
+            console.log('No prices found for this card or no cards found');
+            resolve(false);
+            return;
           }
-          this.pokemonInput.set(pokemonName); // Set the input field to the random Pokemon name
-
-          let url = `https://api.pokemontcg.io/v2/cards?q=name:${this.pokemonInput()}`;
-          this.http.get(url).subscribe({
-            next: (response: any) => {
-            console.log(response);
-            // this.imageObject = {} // Clear previous images
-              const randomIndex = Math.floor(Math.random() * response.data.length);
-              if( response.data[randomIndex] && response.data[randomIndex].images && response.data[randomIndex].images.large) {
-                //get the price object for the card price and card type
-                if( !response.data[randomIndex].tcgplayer.prices || response.data.length === 0) {
-                  console.log('No prices found for this card or no cards found');
-                  resolve(false);
-                  return;
+          let priceKeys : any = Object.keys(response.data.tcgplayer.prices); //access price keys as strings in array:'normal', 'holofoil', etc.
+          let priceHolder = "N/A";
+          let cardTypeHolder = "";
+          if(priceKeys.length !== 0) {
+            cardTypeHolder = priceKeys[0]; //returns string
+            let priceCardType = Object.keys(response.data.tcgplayer.prices[cardTypeHolder]); //returns string array of price card types: 'market', 'low', 'high', etc.
+            if(priceCardType.length !== 0) {
+              priceHolder = response.data.tcgplayer.prices[cardTypeHolder]['market']; //returns the first price type, Ex: 'market'
+              let priceHolderBackup = [];
+              priceHolderBackup[0] = response.data.tcgplayer.prices[cardTypeHolder]['directLow']; 
+              priceHolderBackup[1] = response.data.tcgplayer.prices[cardTypeHolder]['mid']; 
+              
+              let i = 0;
+              while (priceHolder == null ){
+                if (i >= 2){
+                  break;
                 }
-                let priceKeys : any = Object.keys(response.data[randomIndex].tcgplayer.prices); //access price keys as strings in array:'normal', 'holofoil', etc.
-                let priceHolder = "N/A";
-                let cardTypeHolder = "";
-                if(priceKeys.length !== 0) {
-                  cardTypeHolder = priceKeys[0]; //returns string
-                  let priceCardType = Object.keys(response.data[randomIndex].tcgplayer.prices[cardTypeHolder]); //returns string array of price card types: 'market', 'low', 'high', etc.
-                  if(priceCardType.length !== 0) {
-                    priceHolder = response.data[randomIndex].tcgplayer.prices[cardTypeHolder][priceCardType[0]]; //returns the first price type, Ex: 'market'
-                  }
-                  // console.log('Card Type: ' + cardTypeHolder + ' Price: ' + priceHolder);
-                }
-                this.imageID++;
-                // setPokemonCards
-                let setCards : PokemonObject = {
-                  image: response.data[randomIndex].images.large,
-                  price: priceHolder,
-                  cardType: cardTypeHolder
-                };
-
-                //loop through the class images object and log the key, image, and price
-                // const key = Object.keys(this.imageObject)[0];
-                // this.imageObject[this.imageID] = setCards; 
-                setInput[this.imageID] = setCards;
-
-                console.log("this.imageID" ,this.imageID );
-                console.log("setInput length" , Object.keys(setInput).length );
-                // console.log("setInput[this.imageID].image", setInput[this.imageID].image);
-                // console.log("setInput[this.imageID].image", setInput[this.imageID].price);
-                // setInput.add({[this.imageID] : setCards}); // Add the current imageObject to the set
-                resolve(true);
+                priceHolder = priceHolderBackup[i];
+                i++;
+              }
+              if (priceHolder == null) {
+                console.log('No good prices in ' + cardTypeHolder);
+                resolve(false);
+                return;
+              }
+                          
             }
-            else{ resolve(true);}
-            },
-            error: (error) => {
-              console.error('Error fetching Pokemon card:', error);
-              reject(false);
+            else{
+              console.log('No Prices in ' + cardTypeHolder);
+              resolve(false);
+              return;
             }
-          });
+            // console.log('Card Type: ' + cardTypeHolder + ' Price: ' + priceHolder);
+          }
+          this.imageID++;
+          // setPokemonCards
+          let setCards : PokemonObject = {
+            image: response.data.images.large,
+            price: priceHolder,
+            cardType: cardTypeHolder
+          };
+
+          //loop through the class images object and log the key, image, and price
+          // const key = Object.keys(this.imageObject)[0];
+          // this.imageObject[this.imageID] = setCards; 
+          setInput[this.imageID] = setCards;
+
+          console.log("this.imageID" ,this.imageID );
+          console.log("setInput length" , Object.keys(setInput).length );
+          // console.log("setInput[this.imageID].image", setInput[this.imageID].image);
+          // console.log("setInput[this.imageID].image", setInput[this.imageID].price);
+          // setInput.add({[this.imageID] : setCards}); // Add the current imageObject to the set
+          resolve(true);
+        }
+        else{ resolve(true);}
         },
         error: (error) => {
-          console.error('Error fetching random Pokemon:', error);
+          console.error('Error fetching Pokemon card:', error);
           reject(false);
         }
       });

@@ -16,6 +16,9 @@ class Config:
     ORACLE_USER = os.getenv('ORACLE_USER')
     ORACLE_PASSWORD = os.getenv('ORACLE_PASSWORD')
     ORACLE_DSN = os.getenv('ORACLE_DSN')
+
+    # API
+    POKEMON_API_KEY = os.getenv('POKEMON_API_KEY')
     
     # Application
     DEBUG = os.getenv('FLASK_ENV') == 'development'
