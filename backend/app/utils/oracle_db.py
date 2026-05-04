@@ -9,21 +9,17 @@ class OracleDB:
     """Class for managing Oracle Database connections."""
 
     def __init__(self):
-        """Initialize database connection settings from environment variables."""
-        try: 
-            # Load environment variables from .env file
-            # load_dotenv()
-            self.user = Config.ORACLE_USER 
-            self.password = Config.ORACLE_PASSWORD
-            self.dsn = Config.ORACLE_DSN  # Must match an entry in tnsnames.ora
-            self.tns_admin = "/opt/oracle/wallet"
-            os.environ['TNS_ADMIN'] = self.tns_admin
-            # self.tns_admin = os.getenv('TNS_ADMIN') # Set TNS_ADMIN for Oracle Wallet (if required)
-            logger.info(f"Loaded DATABASE_USER: {self.user} \n Loaded DATABASE_DSN: {self.dsn} \
-                \n Loaded TNS_ADMIN: {self.tns_admin}" )
+        self.user     = Config.ORACLE_USER
+        self.password = Config.ORACLE_PASSWORD
+        self.dsn      = Config.get_oracle_dsn()
+
+        if Config.use_wallet():
+            os.environ['TNS_ADMIN'] = Config.ORACLE_WALLET_DIR
             oracledb.init_oracle_client(lib_dir="/opt/oracle/instantclient_23_7")
-        except Exception as e: 
-            logger.error(f"Error initializing Oracle client: {e}")
+            logger.info(f"Oracle thick mode | DSN={self.dsn} | wallet={Config.ORACLE_WALLET_DIR}")
+        else:
+            # Thin mode — pure Python, no Instant Client needed locally
+            logger.info(f"Oracle thin mode | DSN={self.dsn}")
 
     def get_connection(self):
         """Returns a new Oracle database connection."""
@@ -31,7 +27,7 @@ class OracleDB:
             return oracledb.connect(user=self.user, password=self.password, dsn=self.dsn)
         except Exception as e:
             logger.error(f"Error connecting to Oracle DB: {e}")
-            raise
+            raise Exception("At get_connection: Could not get database connection")
 
     def test_connection(self):
         """Tests the Oracle database connection."""
@@ -43,28 +39,39 @@ class OracleDB:
         else:
             logger.error("Oracle DB connection failed.")
 
-    def execute_query(self, query, params=None, fetch_all=True):
-        """Executes a SQL query and returns the result."""
+    def execute_query(self, query, params=None, operation="GET"):
+        """Executes a SQL query based on operation type (GET, POST, PUT)."""
         conn = self.get_connection()
         if not conn:
-            return None
+            raise Exception("Could not get database connection")
 
         try:
             cursor = conn.cursor()
             cursor.execute(query, params or {})
-            conn.commit()  # Commit the transaction after executing the query
-            
             logger.info(f"Executed query: {query}")
-            
-            if fetch_all:
+
+            if operation == "GET":
                 result = cursor.fetchall()
+                logger.info(f"Query result: {result}")
+                return result
+            elif operation == "POST":
+                conn.commit()
+                # result = {
+                #     "last_id": cursor.lastrowid,
+                #     "rows_affected": cursor.rowcount
+                # }
+                logger.info(f"Insert result:")
+            elif operation == "PUT":
+                conn.commit()
+                result = {"rows_affected": cursor.rowcount}
+                logger.info(f"Rows updated: {result}")
+                return result
             else:
-                result = cursor.fetchone()
-            logger.info(f"Query result: {result}")
-            return result
+                raise ValueError(f"Invalid operation type, operation: {operation}")
         except Exception as e:
-            logger.error(f"Database query error: {e}")
-            return None
+            logger.error(f"Database query error with operation {operation}: {e}")
+            conn.rollback()
+            raise Exception("Database operation failed")
         finally:
             cursor.close()
             conn.close()

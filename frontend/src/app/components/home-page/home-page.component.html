@@ -10,10 +10,6 @@
             <button class="btn btn-wide btn-xl btn-info text-3xl py-8 px-20 h-10 bg-gradient-to-r from-blue-400 via-cyan-500 to-teal-600 hover:from-blue-500 hover:via-cyan-600 hover:to-teal-700 animate-pulse hover:animate-none transition-all duration-300 "
             (click)="this.playGame()"
             >Play</button>
-
-            <button class="btn btn btn-outline btn-primary mt-5 text-lg"
-            (click)="this.showHowToPlay.set(!showHowToPlay())"
-            >How to play</button>
         }
         <!-- @if(this.gameOver() === true || this.showPlayState() === false) {
             <button class="btn btn btn-outline btn-primary mt-5 text-lg"
@@ -28,48 +24,45 @@
             <div class="card text-center bg-primary text-primary-content w-96 mx-2">
                 <div class="card-body">
                     <h2 class="text-center">1</h2>
-                    <p>A random Pokemon card will be displayed</p>
+                    <p>Two random Pokemon cards will be displayed</p>
                     <div class="card-actions justify-end"></div>
                 </div>
             </div>
             <div class="card text-center bg-primary text-primary-content w-96 mx-2">
                 <div class="card-body">
                     <h2 class="text-center">2</h2>
-                    <p>If you think the price of the card is higher then the displayed price
-                    Click Higher
-                    Otherwise
-                    Click Lower </p>
+                    <p>If you think the price of the second card is higher than the first card price
+                    click <b>Higher</b>
+                    otherwise
+                    click <b>Lower</b> </p>
                     <div class="card-actions justify-end"></div>
                 </div>
             </div>
             <div class="card text-center bg-primary text-primary-content w-96 mx-2">
                 <div class="card-body">
                     <h2 class="text-center">3</h2>
-                    <p>If you guess correctly, you will get a point and a new card will be displayed</p>
+                    <p>If you guess correctly, you will get a point and a new second card will be displayed</p>
                     <div class="card-actions justify-end"></div>
                 </div>
             </div>
             <div class="card text-center bg-primary text-primary-content w-96 mx-2">
                 <div class="card-body">
                     <h2 class="text-center">4</h2>
-                    <p>Then guess if the new card is higher or lower than the previous card
-                    Continue until you get a card price wrong ! </p>
+                    <p>Then guess if the new card is higher or lower than the first card displayed
+                    Continue until you guess wrong ! </p>
                     <div class="card-actions justify-end"></div>
                 </div>
             </div>
         </div>
     }
 
-    @if(this.isLoading() === false) { <!-- if nothing is loading -->
-        @if(this.showPlayState() === true && this.gameOver() !== true){
-            <div class="flex flex-col items-center mt-10">
-                <button class="btn btn-primary btn-lg mb-5" (click)="this.checkAnswer(true)">Higher</button>
-                <button class="btn btn-primary btn-lg mb-5" (click)="this.checkAnswer(false)">Lower</button>
-                <p>Your score is : {{this.score()}}</p>
-                <!-- <div class="text-2xl font-bold">Current Score: {{this.score()}}</div> -->
-            </div>
-        }
+    @if(this.isLoadingCards() === false) { <!-- if no cards loading -->
         @if( this.showSearchResults() === true && getImagesLength() > 0 ) {
+            <p class="mt-6 mb-3 text-3xl font-extrabold tracking-wide text-white 
+                bg-gradient-to-r from-purple-500 via-pink-500 to-red-500 
+                px-6 py-3 rounded-lg shadow-lg">
+                Score: {{ this.score() }}
+            </p>
             <div class="flex">
                 @for (image of this.imageObject| keyvalue; track image.key) {
                     @if(image.key == "2" ) {
@@ -96,6 +89,14 @@
                 }
             </div>
         }
+        @if(this.showPlayState() === true && this.gameOver() !== true){
+            <div class="flex flex-col items-center mt-10">
+                <button class="btn btn-primary btn-lg mb-5" (click)="this.checkAnswer(true)" 
+                    [disabled]="this.isSecondCardLoading()">Higher</button>
+                <button class="btn btn-primary btn-lg mb-5" (click)="this.checkAnswer(false)" 
+                    [disabled]="this.isSecondCardLoading()">Lower</button>
+            </div>
+        }
     }
     @else {
         <progress class="progress w-56 progress-primary my-5"></progress>
@@ -109,9 +110,14 @@
         <div class="text-2xl font-bold text-green-500 mt-5">
             Your score : {{this.score()}}
         </div>
-        <button class="btn btn-secondary mt-5" (click)="this.playGame();">Play Again</button>
+        <button class="btn btn-secondary mt-5 text-lg" (click)="this.playGame();">Play Again</button>
     }
 
+    @if(this.gameOver() === true || this.showPlayState() === false) {
+        <button class="btn btn btn-outline btn-primary mt-5 text-lg"
+            (click)="this.showHowToPlay.set(!showHowToPlay())"
+            >How to play</button>
+    }
 
     @if( false ) {
         <div class="flex p-5"> <!-- Input and button -->
@@ -120,7 +126,7 @@
             (input)="pokemonInput.set($any($event.target).value)"
             (keydown.enter)="getPokemonImage()"
             />
-            <button class="btn btn-primary" (click)="getPokemonImage()">Search</button>
+            <button class="btn btn-primary mt-5" (click)="getPokemonImage()">Search</button>
         </div>
     }
 </div>

@@ -41,7 +41,7 @@ testem.log
 # System files
 .DS_Store
 Thumbs.db
-backend/app/.env
+.env
 frontend/def.conf
 wallet
 

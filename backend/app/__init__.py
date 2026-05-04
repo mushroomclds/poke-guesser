@@ -1,10 +1,10 @@
 from flask import Flask
 from flask_cors import CORS
 
-from .config import Config
 from .utils.logger import setup_logging
 setup_logging()  # Initialize logging
 
+from .config import Config
 
 import os
 
@@ -34,6 +34,10 @@ def create_app(config_class=Config):
     make them available under the specified URL prefixes
     '''
     # app.register_blueprint(auth, url_prefix="/auth")
-    app.register_blueprint(api, url_prefix="/api")
+    app.register_blueprint(api, url_prefix="/api") # now we can use @api routes in api.py
+
+    # endpoint is now POST /api/game-session
+    from app.routes.game_session import game_bp
+    app.register_blueprint(game_bp, url_prefix='/api') # now we can use @game_bp routes in game_session.py
 
     return app

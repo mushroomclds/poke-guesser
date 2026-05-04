@@ -3,4 +3,4 @@ dist
 .git
 *.log
 frontend/.angular
-backend/app/.env
+.env

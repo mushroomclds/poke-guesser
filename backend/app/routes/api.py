@@ -140,7 +140,7 @@ def get_card_data():
     logger.info(f'card retrieved, current cache size: {card_cache.qsize()}')
     return jsonify(card)
 
-@api.route('/game-state-user-input', methods=['POST'])
+@api.route('/game-state-check-answer', methods=['POST'])
 def get_game_state_user_input():
 
     data = request.get_json()
@@ -161,6 +161,49 @@ def get_token():
     token = secrets.token_urlsafe(32)
     session['user_input_token'] = token
     return jsonify({'token': token}) # returns 200 status code by default
+
+
+# @api.route('/user-score', methods=['POST'])
+# def store_user_score():
+#     allowed_origin = "https://mushroom-clouds.com"  # Change to your deployed frontend domain
+#     origin = request.headers.get('Origin')
+#     if origin != allowed_origin:
+#         return jsonify({'error': 'Invalid origin'}), HTTPStatus.FORBIDDEN #403 
+
+#     """
+#     Store user score in the userInput table.
+#     Expects JSON: { "score": "scoreNumber" }
+#     Requires JWT in Authorization header.
+#     """
+#     data = request.get_json()
+#     user_score = data.get('score')
+    
+#     token = data.get('token')
+#     if not user_score:
+#         return jsonify({'error': 'score is required'}), HTTPStatus.BAD_REQUEST #400
+#     if not token or token != session.get('user_input_token'):
+#         return jsonify({'error': 'Invalid or missing token'}), HTTPStatus.FORBIDDEN #403 
+#     # Optionally, remove the token after use to make it one-time
+#     session.pop('user_input_token', None)
+
+#     # Sanitize user input
+#     # user_score = html.escape(user_score.strip())
+#     # if len(user_score) > 15:  # Adjust max length as needed
+#     #     return jsonify({'error': 'Input too long'}), HTTPStatus.BAD_REQUEST #400
+#     # user_score = re.sub(r'[<>"\']', '', user_score)
+#     if not type(user_score) in (int):
+#         return jsonify({'error': 'not a number'}), HTTPStatus.BAD_REQUEST #400
+
+
+#     insert_query = """
+#         INSERT INTO userInput (score, date_time)
+#         VALUES (:score_value, SYS_EXTRACT_UTC(SYSTIMESTAMP) AT TIME ZONE 'America/Chicago')
+#     """
+#     try:
+#         db.execute_query(insert_query, {'score_value': user_score})
+#         return jsonify({'message': 'Input stored successfully'}), HTTPStatus.CREATED #201
+#     except Exception as e:
+#         return jsonify({'error': "error in route "}), HTTPStatus.INTERNAL_SERVER_ERROR #500
 
 @api.route('/user-input', methods=['POST'])
 def store_user_input():

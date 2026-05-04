@@ -45,3 +45,42 @@ This will compile your project and store the build artifacts in the `dist/` dire
 ## Current Status
 Currently I only have the below done. Gets 3 random cards given pokemon name and outputs price
 ![alt text](image.png)
+
+
+
+## Here’s a concise, high-level summary of the backend architecture and technologies for your web app:
+
+---
+
+## Backend Architecture Overview
+
+The backend is structured as a modular Python Flask application, organized for scalability and maintainability. It follows a layered architecture with clear separation of concerns:
+
+- **Entry Point**: main.py initializes and runs the Flask app.
+- **App Package**: Contains all core logic, split into submodules:
+  - **models/**: Defines ORM models (e.g., User) for database interaction.
+  - **routes/**: Houses API endpoints, authentication, and game session logic.
+  - **services/**: Business logic and service classes (e.g., user management).
+  - **utils/**: Utility functions for authentication, logging, and database connections.
+- **Database**: Interacts with an Oracle database, with connection utilities and table creation scripts.
+- **Configuration**: Centralized in config.py for environment and app settings.
+- **Logging**: Custom logging utilities for monitoring and debugging.
+- **Testing**: test.py for backend unit tests.
+
+### Request Flow
+
+1. **Client Request** → Flask API endpoint (routes/)
+2. **Authentication/Validation** (utils/auth_decorator.py)
+3. **Business Logic** (services/)
+4. **Database Access** (models/, utils/oracle_db.py)
+5. **Response** → Client
+
+### Technologies Used
+
+- **Python 3**
+- **Flask** (web framework)
+- **Oracle Database** (via cx_Oracle or similar)
+- **Custom Logging**
+- **Modular Python Packages**
+
+---

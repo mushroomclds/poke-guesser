@@ -16,6 +16,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/* \
     && ln -s /usr/lib/x86_64-linux-gnu/libaio.so.1t64 /usr/lib/x86_64-linux-gnu/libaio.so.1
 
+ENV TNS_ADMIN=/opt/oracle/instantclient_23_7/network/admin
 # Download and install Oracle Instant Client
 RUN mkdir -p /opt/oracle && \
     cd /opt/oracle && \
@@ -25,9 +26,8 @@ RUN mkdir -p /opt/oracle && \
 
 # Set environment variables for Oracle Instant Client
 ENV LD_LIBRARY_PATH=/opt/oracle/instantclient_23_7
-RUN mkdir -p /opt/oracle/wallet
-COPY wallet/ /opt/oracle/wallet/
-RUN chmod 600 /opt/oracle/wallet/*
+COPY wallet/ /opt/oracle/instantclient_23_7/network/admin/
+RUN chmod 600 /opt/oracle/instantclient_23_7/network/admin/*
 
 # Copy the requirements file into the container
 COPY backend/requirements.txt ./
@@ -48,4 +48,4 @@ EXPOSE 5000
 # app is the Flask instance in main.py
 # --access-logfile=- Logs all HTTP access logs (requests) to stdout
 # --error-logfile=-Logs all errors to stderr 
-CMD ["gunicorn", "--chdir", "/usr/local/app/backend", "main:app", "--bind", "0.0.0.0:5000", "--log-level=info", "--access-logfile=-", "--error-logfile=-", "--timeout=120"]
+CMD ["gunicorn", "--chdir", "/usr/local/app/backend", "main:app", "--bind", "0.0.0.0:5000", "--workers", "1", "--log-level=info", "--access-logfile=-", "--error-logfile=-", "--timeout=120"]
