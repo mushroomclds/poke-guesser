@@ -33,6 +33,15 @@ jobs:
           file: Dockerfile.angular
           push: true
           tags: ghcr.io/${{ github.repository }}/pokeapp_frontend:${{ github.sha }}
+      
+      - name: Setup Oracle Wallet
+        run: |
+          mkdir -p wallet
+          echo "${{ secrets.WALLET_CWALLET }}" | base64 -d > wallet/cwallet.sso
+          echo "${{ secrets.WALLET_EWALLET }}" | base64 -d > wallet/ewallet.p12
+          echo "${{ secrets.WALLET_TNSNAMES }}" | base64 -d > wallet/tnsnames.ora
+          echo "${{ secrets.WALLET_SQLNET }}" | base64 -d > wallet/sqlnet.ora
+          chmod 600 wallet/*
 
       - name: Build and push Backend Docker image
         uses: docker/build-push-action@v5
