@@ -52,4 +52,4 @@ backend/app/routes/__pycache__
 backend/app/services/__pycache__
 backend/app/utils/__pycache__
 backend/app/test.py
-backend/logs/flask_app.log
+wallet_secrets_output

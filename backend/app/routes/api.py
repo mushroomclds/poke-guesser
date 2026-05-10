@@ -1,6 +1,4 @@
 from flask import Blueprint, request, jsonify, session
-# from app.services.user_service import UserService
-# from app.utils.auth_decorator import require_auth
 import secrets
 from app.utils.oracle_db import db
 import html, re
@@ -10,19 +8,32 @@ from app.utils.logger import logger
 import queue
 from app.config import Config
 import os
+from datetime import datetime
 
 api = Blueprint('api', __name__) # Blueprint for API routes, imported in init.py
 # user_service = UserService()
 
 API_BASE = "https://api.pokemontcg.io/v2"
 headers = {"X-Api-Key": Config.POKEMON_API_KEY}
-logger.info(Config.POKEMON_API_KEY)
+logger.debug(Config.POKEMON_API_KEY)
 
 CACHE_SIZE = 10
 card_cache = queue.Queue(maxsize=CACHE_SIZE)  # Pre-loaded cards using Queue
 
-def fetchPokemonSetData():
+# Determine the correct path for pokemonSetData.txt
+local_path = os.path.join(os.path.dirname(__file__), "pokemonSetData.txt")
+docker_path = "/usr/local/app/backend/app/routes/pokemonSetData.txt"
+# Use docker_path if it exists, otherwise fallback to local_path
+data_file_path = docker_path if os.path.exists(docker_path) else local_path
 
+def loadPokemonSetData():
+    with open(data_file_path, 'r') as f:
+        logger.info(f'cachePokemonSetData loading...')
+        return json.load(f)
+
+def fetchPokemonSetData():
+    #function grabs pokemon set data with num cards in set to populate card_id. 
+    #call function periodically to update with newer sets
     global cachePokemonSetData
     headers = {"X-Api-Key": Config.POKEMON_API_KEY}
 
@@ -31,21 +42,22 @@ def fetchPokemonSetData():
         return jsonify({"error", "pokemon data set couldnt be retrieved"}), 400
     cachePokemonSetData = pokemonSetData.json().get("data", [])
 
-    with open('./pokemonSetData.txt', 'w') as a: 
+    with open(data_file_path, 'w') as a: 
         json.dump(cachePokemonSetData, a)
-    logger.info(cachePokemonSetData)
+    logger.debug(cachePokemonSetData)
+    logger.info("pokemonSetData successfully updated")
 
-# fetchPokemonSetData()
-# Determine the correct path for pokemonSetData.txt
-local_path = os.path.join(os.path.dirname(__file__), "pokemonSetData.txt")
-docker_path = "/usr/local/app/backend/app/routes/pokemonSetData.txt"
-
-# Use docker_path if it exists, otherwise fallback to local_path
-data_file_path = docker_path if os.path.exists(docker_path) else local_path
-
-with open(data_file_path, 'r') as f:
-    cachePokemonSetData = json.load(f)
-    logger.info(f'cachePokemonSetData successfully loaded')
+# Check if pokemonSetData file needs to be updated (once per month)
+cachePokemonSetData = loadPokemonSetData()
+try:
+    stat = os.stat(data_file_path)
+    last_mod = datetime.fromtimestamp(stat.st_mtime)
+    now = datetime.now()
+    if last_mod.year != now.year or last_mod.month != now.month:
+        logger.info('pokemonSetData.txt is outdated, updating...')
+        fetchPokemonSetData()
+except Exception as e:
+    logger.info(f'Error checking or updating pokemonSetData.txt: {e}')
 
 def fetch_card_from_api():
     # logger.info(Config.POKEMON_API_KEY)

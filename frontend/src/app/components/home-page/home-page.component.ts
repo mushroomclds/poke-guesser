@@ -1,6 +1,8 @@
 import { CurrencyPipe, KeyValuePipe } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
-import { Component, signal } from '@angular/core';
+import { Component, signal, inject } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { catchError, map, of, combineLatest } from 'rxjs';
 
 interface PokemonObject {
   image: string;
@@ -16,7 +18,28 @@ interface PokemonObject {
 })
 export class HomePageComponent {
 
-  constructor(private http: HttpClient) {}
+  private http = inject(HttpClient);
+  readonly highScore = toSignal(
+    this.http.get<{ high_score: number }>('/api/game-session/high-score').pipe(
+      map(res => res.high_score ?? 0),
+      catchError(err => {
+        console.error('Failed to fetch high score:', err);
+        return of(0);
+      })
+    ),
+    { initialValue: 0 }
+  );
+
+  readonly highScoreToday = toSignal(
+    this.http.get<{ high_score_today: number }>('/api/game-session/high-score-today').pipe(
+      map(res => res.high_score_today ?? 0),
+      catchError(err => {
+        console.error('Failed to fetch today\'s high score:', err);
+        return of(0);
+      })
+    ),
+    { initialValue: 0 }
+  );
 
   showHowToPlay       = signal<boolean>(false);
   showSearchResults   = signal<boolean>(false);

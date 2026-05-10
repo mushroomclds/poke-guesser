@@ -1,11 +1,19 @@
 import secrets
 from flask import Blueprint, request, jsonify, session
 from http import HTTPStatus
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
+import pytz
+def _get_cst_tz():
+    """Returns the Central Standard Time (CST) timezone object."""
+    # CST/CDT (America/Chicago) handles daylight saving automatically
+    return pytz.timezone('America/Chicago')
+
 
 from app.utils.oracle_db import db
 from app.config import Config
 from app.utils.logger import logger
+import threading
+import time
 
 game_bp = Blueprint('game', __name__)
 
@@ -39,7 +47,10 @@ def _parse_iso_timestamp(value: str):
     dt = datetime.fromisoformat(value)
     if dt.tzinfo is None:
         dt = dt.replace(tzinfo=timezone.utc)
-    return dt
+    # Convert to CST
+    cst = _get_cst_tz()
+    dt_cst = dt.astimezone(cst)
+    return dt_cst
 
 
 def _validate_score(value) -> int:
@@ -54,6 +65,96 @@ def _validate_score(value) -> int:
         raise ValueError("Score exceeds maximum allowed value.")
     return score
 
+
+# --- In-memory caches for high scores ---
+_all_time_high_score_cache = {
+    'score': None,
+    'timestamp': 0,
+    'lock': threading.Lock(),
+}
+_daily_high_score_cache = {
+    'score': None,
+    'date': None,
+    'timestamp': 0,
+    'lock': threading.Lock(),
+}
+
+def _get_high_score_all_time():
+    """
+    Returns all-time highest score, using cache if recent.
+    Cache is refreshed every 60 seconds.
+    """
+    now = time.time()
+    with _all_time_high_score_cache['lock']:
+        if (
+            _all_time_high_score_cache['score'] is not None
+            and now - _all_time_high_score_cache['timestamp'] < 60
+        ):
+            return _all_time_high_score_cache['score']
+        query = (
+            "SELECT MAX(final_score) AS high_score "
+            "FROM game_sessions "
+        )
+        try:
+            result = db.execute_query(query)
+            score = result[0] if result and result[0] is not None else 0
+        except Exception as e:
+            logger.exception('Failed to fetch all-time high score')
+            score = 0
+        _all_time_high_score_cache['score'] = score
+        _all_time_high_score_cache['timestamp'] = now
+        return score
+
+def _get_high_score_today():
+    """
+    Returns today's highest score, using cache if recent.
+    Cache is refreshed every 60 seconds or if date changes.
+    """
+    now = time.time()
+    cst = _get_cst_tz()
+    today_str = datetime.now(cst).strftime('%Y-%m-%d')
+    with _daily_high_score_cache['lock']:
+        if (
+            _daily_high_score_cache['score'] is not None
+            and _daily_high_score_cache['date'] == today_str
+            and now - _daily_high_score_cache['timestamp'] < 60
+        ):
+            return _daily_high_score_cache['score']
+        # Oracle: Convert play_started_at to CST for daily comparison
+        query = (
+            "SELECT MAX(final_score) AS high_score "
+            "FROM game_sessions "
+            "WHERE TRUNC(CAST(play_started_at AT TIME ZONE 'America/Chicago' AS DATE)) = TRUNC(CAST(SYSTIMESTAMP AT TIME ZONE 'America/Chicago' AS DATE))"
+        )
+        try:
+            result = db.execute_query(query)
+            score = result[0] if result and result[0] is not None else 0
+        except Exception as e:
+            logger.exception("Failed to fetch today's high score")
+            score = 0
+        _daily_high_score_cache['score'] = score
+        _daily_high_score_cache['date'] = today_str
+        _daily_high_score_cache['timestamp'] = now
+        return score
+
+
+@game_bp.route('/game-session/high-score', methods=['GET'])
+def get_high_score():
+    """Returns the all-time highest score."""
+    err = _require_origin()
+    if err:
+        return err
+    score = _get_high_score_all_time()
+    return jsonify({'high_score': score}), HTTPStatus.OK
+
+@game_bp.route('/game-session/high-score-today', methods=['GET'])
+def get_high_score_today():
+    """Returns the highest score for today (UTC)."""
+    err = _require_origin()
+    if err:
+        return err
+    score = _get_high_score_today()
+    return jsonify({'high_score_today': score}), HTTPStatus.OK
 
 @game_bp.route('/game-session/token', methods=['GET'])
 def get_game_session_token():
@@ -141,7 +242,7 @@ def store_game_session():
             'final_score':     final_score,
         }
         , "POST")
-        logger.info(f"game_session stored | started={play_started_at} score={final_score}")
+        logger.info(f"game_session stored | started={play_started_at} (CST) score={final_score}")
         return jsonify({'message': 'Game session stored successfully.'}), HTTPStatus.CREATED
 
     except Exception:

@@ -34,7 +34,7 @@ done
 
 docker network create $NETWORK 2>/dev/null || true
 
-docker build --pull --rm -f 'Dockerfile.angular' -t 'pokeapp_frontend:latest' '.'
+docker build --pull --rm -f 'Dockerfile.angular' -t 'pokeapp_frontend:latest' '.' --build-arg ENV=test
 docker build --pull --rm -f 'Dockerfile.flask'   -t 'pokeapp_backend:latest'  '.'
 
 docker run -d \
